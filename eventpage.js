@@ -92,7 +92,7 @@ function createCourseGroup(data, callback) {
     const params = {
         course_instance_id: data.course_instance_id,
         course_group_name: data.course_group_name,
-        teachers: data.teacher_names,
+        teachers: data.teacher_names.map(function(name) { return { teacher_name: name}; }),
     };
 
     const wrapped_callback = (function(callback) {
