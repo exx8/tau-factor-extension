@@ -1,10 +1,10 @@
 {
-  "appName": {
-    "message": "TAU Factor",
-    "description": "Extension for www.tau-factor.com"
-  },
-  "appDesc": {
-    "message": "Extension for www.tau-factor.com",
-	"description":"The extension enables you to add Tel-Aviv University grade distributions into TAU Factor"
-  }
+    "appName": {
+      "message": "TAU Factor",
+      "description": "Extension for www.tau-factor.com"
+    },
+    "appDesc": {
+        "message": "Extension for www.tau-factor.com",
+        "description":"The extension enables you to add Tel-Aviv University grade distributions into TAU Factor"
+    }
 }
