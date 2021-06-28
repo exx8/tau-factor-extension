@@ -35,16 +35,16 @@ function startSession(sendResponse) {
                 if (response_status == 200) {
                     const response_json = JSON.parse(response_text);
                     sendResponse(response_json);
+                    return;
                 }
                 if (response_status == 400) {
                     const response_json = JSON.parse(response_text);
                     console.log(response_json?.detail);
-                    sendResponse(null);
                 }
             } catch (e) {
                 console.log("Session Couldn't load");
-                sendResponse(null);
             }
+            sendResponse(null);
         };
     }) (sendResponse);
 
@@ -72,16 +72,16 @@ function createCourse(data, callback) {
                 if (response_status == 201) {
                     const response_json = JSON.parse(response_text);
                     callback(response_json.course_instance_id);
+                    return;
                 }
                 if (response_status == 400) {
                     const response_json = JSON.parse(response_text);
                     console.log(response_json?.detail);
-                    callback(null);
                 }
             } catch (e) {
                 console.log("Could not create course");
-                callback(null);
             }
+            callback(null);
         };
     })(callback);
 
@@ -101,16 +101,16 @@ function createCourseGroup(data, callback) {
                 if (response_status == 201) {
                     const response_json = JSON.parse(response_text);
                     callback(response_json.course_group_id);
+                    return;
                 }
                 if (response_status == 400) {
                     const response_json = JSON.parse(response_text);
                     console.log(response_json?.detail);
-                    callback(null);
                 }
             } catch (e) {
                 console.log("Could not create course group");
-                callback(null);
             }
+            callback(null);
         };
     })(callback);
 
@@ -142,12 +142,11 @@ function addExam(data, callback) {
                 if (response_status == 400) {
                     const response_json = JSON.parse(response_text);
                     console.log(response_json?.detail);
-                    callback(false);
                 }
             } catch (e) {
                 console.log("Could not add exam data");
-                callback(false);
             }
+            callback(false);
         };
     })(callback);
 
@@ -165,7 +164,8 @@ function submitGrades(data, sendResponse) {
     const createCourseGroupCallback = (function(data, addExamCallback) {
         return function (course_group_id) {
             if (course_group_id === null) {
-                addExamCallback(null);
+                addExamCallback(false);
+        return;
             }
             data["course_group_id"] = course_group_id;
             addExam(data, addExamCallback);
@@ -176,6 +176,7 @@ function submitGrades(data, sendResponse) {
         return function (course_instance_id) {
             if (course_instance_id === null) {
                 createCourseGroupCallback(null);
+        return;
             }
             data["course_instance_id"] = course_instance_id;
             createCourseGroup(data, createCourseGroupCallback);
