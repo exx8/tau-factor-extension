@@ -73,13 +73,13 @@ function addIframe(ID, name, btn) {
                 const iframeURL = iframeWindow.location.href;
                 const iframe = iframeWindow.document;
 
-                const should_get_exam_instances = (moeds === null) && (groups === null);
-                const res = extractData(iframe, should_get_exam_instances);
+                const should_get_available_exams = (moeds === null) && (groups === null);
+                const res = should_get_available_exams ? getAvailableExams(iframe) : extractData(iframe);
                 if (res === undefined) {
                     return;
                 }
 
-                if (should_get_exam_instances) {
+                if (should_get_available_exams) {
                     if (res === false) {
                         alert("שגיאה בהוצאת נתונים מקורס זה");
                         btn.style.display = "none";
@@ -89,7 +89,7 @@ function addIframe(ID, name, btn) {
                     moeds = res.moeds;
                     groups = res.groups;
                     moedIdx = -1;
-                    groupIdx = 1; // no need for all groups together
+                    groupIdx = 0; // If we don't want group "All" then change to 1
                 } else if (res !== false) {
                     res["course_name"] = name;
                     submitGrades(res);
@@ -155,77 +155,16 @@ function getMoedSelect(selects) {
     return selects[1];
 }
 
-function extractData(iframe, should_get_exam_instances) {
-    if(iframe.getElementsByClassName("msgerrs rounddiv").length > 0 || 
-       iframe.body.innerText.indexOf("אין ציונים בקורס") != -1) {
-        return false;
-    }
-
-    var selects = iframe.getElementsByTagName("select");
-    if (selects.length === 0) {
-        return undefined;
-    }
-
-    var groupSelect = getGroupSelect(selects);
-    var moedSelect = getMoedSelect(selects);
-
-    if (should_get_exam_instances) {
-        var groups = [];
-        var groupOptions = groupSelect.options;
-        for (var i = 0; i < groupOptions.length; i++) {
-            groups.push(groupOptions[i].value);
-        }
-
-        var moeds = [];
-        var moedOptions = moedSelect.options;
-        for (var i = 0; i < moedOptions.length; i++) {
-            moeds.push(moedOptions[i].value);
-        }
-
-        return {groups: groups, moeds: moeds};
-    }
-
-    var tables = iframe.getElementsByTagName("table");
-    var teachersTable = tables[0];
-    var statsTable = tables[1];
-    var gradesTable = tables[3];
-    for (var i = 0; i < tables.length; i++) {
-        if (tables[i].offsetParent === null) {
-            continue;
-        }
-        if (tables[i].innerText.indexOf("מרצה") != -1) {
-            teachersTable = tables[i];
-        }
-        if (tables[i].innerText.indexOf("ממוצע") != -1 && tables[i].innerText.indexOf("סטיית תקן") != -1) {
-            statsTable = tables[i];
-        }
-        if (tables[i].innerText.indexOf("תחום") != -1 && tables[i].innerText.indexOf("ציונים") != -1) {
-            gradesTable = tables[i];
-        }
-    }
-
-    var teacher_names = teachersTable.innerText.split("מרצה:")[1].trim();
-    for (var i = 0; i < teachersTable.rows.length; i++) {
-        if (teachersTable.rows[i].offsetParent === null) {
-            continue;
-        }
-        for (var j = 0; j < teachersTable.rows[i].cells.length-1; j++) {
-            if (teachersTable.rows[i].cells[j].innerText.indexOf("מרצה") != -1) {
-                teacher_names = teachersTable.rows[i].cells[j+1].innerText.trim();
-                break;
-            }
-        }
-    }
-
+function getExamStatistics(stats_table) {
     var students_count, failures_count, mean, median, standard_deviation = {};
-    var grades = [];
-    for (var i = 0; i < statsTable.rows.length; i++) {
-        if (statsTable.rows[i].offsetParent === null) {
+    for (var i = 0; i < stats_table.rows.length; i++) {
+        const row = stats_table.rows[i];
+        if (row.offsetParent === null) {
             continue;
         }
-        for (var j = 0; j < statsTable.rows[i].cells.length-1; j++) {
-            var key = statsTable.rows[i].cells[j].innerText;
-            var val = statsTable.rows[i].cells[j+1].innerText;
+        for (var j = 0; j < row.cells.length-1; j++) {
+            var key = row.cells[j].innerText;
+            var val = row.cells[j+1].innerText;
             if (key.indexOf("נבחנים") != -1) {
                 students_count = val;
             } else if (key.indexOf("מס' נכשלים") != -1) {
@@ -240,65 +179,159 @@ function extractData(iframe, should_get_exam_instances) {
         }
     }
 
-    var rangePos = 2;
-    var testeesPos = 1;
-    var first = true;
-    for (var i = 0; i < gradesTable.rows.length; i++) {
-        if (gradesTable.rows[i].offsetParent === null) {
-            continue;
+    return {
+        students_count: students_count,
+        failures_count: failures_count,
+        mean: mean,
+        median: median,
+        standard_deviation: standard_deviation
+    };
+}
+
+function getExamGrades(grades_table) {
+    var grades = [];
+    var grade_range_pos = 2;
+    var num_testees_pos = 1;
+
+    const headers_cells = grades_table.rows[0].cells;
+    for (var cell_idx = 0; cell_idx < headers_cells.length; cell_idx++) {
+        const cell = headers_cells[cell_idx];
+        if (cell.innerText.indexOf("תחום") != -1) {
+            grade_range_pos = cell_idx;
         }
-        var row = gradesTable.rows[i].cells;
-        if (first) {
-            for (var j = 0; j < row.length; j++) {
-                if (row[j].innerText.indexOf("תחום") != -1) {
-                    rangePos = j;
-                }
-                if (row[j].innerText.indexOf("נבחנים") != -1) {
-                    testeesPos = j;
-                }
-            }
-            first = false;
-        } else {
-            var range = row[rangePos].innerText.trim().split("-");
-            var amount = row[testeesPos].innerText.trim();
+        if (cell.innerText.indexOf("נבחנים") != -1) {
+            num_testees_pos = cell_idx;
+        }
+    }
+
+    for (var row_idx = 1; row_idx < grades_table.rows.length; row_idx++) {
+        const row = grades_table.rows[row_idx];
+        if (row.offsetParent !== null) {
+            var cells = row.cells;
+            var grade_range = cells[grade_range_pos].innerText.trim().split("-");
+            var num_testees = cells[num_testees_pos].innerText.trim();
             grades.push({
-                lowest_grade: range[0],
-                highest_grade: range[1],
-                students_in_range: amount
+                lowest_grade: grade_range[0],
+                highest_grade: grade_range[1],
+                students_in_range: num_testees
             });
         }
     }
 
-    var course_data = iframe.getElementsByClassName("listtd rounddiv2")[0].getElementsByTagName("b");
-    var year_sem = course_data[1].innerHTML.split("/");
+    return {
+        grades: grades,
+    };
+}
+
+function getExamTeachers(teachers_table) {
+    const teacher_table_bolds = teachers_table.getElementsByTagName("b");
+    const teacher_names = teacher_table_bolds[teacher_table_bolds.length-1].innerText.trim().split("\n");
+    if (teacher_names.length == 0 || (teacher_names.length == 1 && teacher_names[0] === "")) {
+        return {};
+    }
+    else {
+        return {
+            teacher_names: teacher_names
+        };
+    }
+}
+
+function getGeneralExamData(iframe) {
+    const course_data = iframe.getElementsByClassName("listtd rounddiv2")[0].getElementsByTagName("b");
+    const year_sem = course_data[1].innerHTML.split("/");
 
     const course_code = addHyphenInIndex(course_data[0].innerHTML.split("-")[0], 4);
 
-    var year = year_sem[0];
-    var semester_num = year_sem[1];
+    const year = year_sem[0];
+    const semester_num = year_sem[1];
     const semester_num_to_val = {
         "1": "A",
         "2": "B",
         "3": "SUMMER",
         "4": "ALL_YEAR"
     };
-
-    var group = groupSelect.value;
-    var moed = (moedSelect.value < 9) ? moedSelect.value : 0; // 9 is final grade, which is marked in backend as 0
+    const semester = semester_num_to_val[semester_num];
 
     return {
         course_code: course_code,
-        teacher_names: teacher_names.split("\n"),
         year: year,
-        semester: semester_num_to_val[semester_num],
-        course_group_name: group,
+        semester: semester
+    };
+}
+
+
+function getAvailableExams(iframe) {
+    if(iframe.getElementsByClassName("msgerrs rounddiv").length > 0 || 
+       iframe.body.innerText.indexOf("אין ציונים בקורס") != -1) {
+        return false;
+    }
+
+    var selects = iframe.getElementsByTagName("select");
+    if (selects.length === 0) {
+        return undefined;
+    }
+
+    var groups = [];
+    const groupSelect = getGroupSelect(selects);
+    const groupOptions = groupSelect.options;
+    for (var group_idx = 0; group_idx < groupOptions.length; group_idx++) {
+        groups.push(groupOptions[group_idx].value);
+    }
+
+    var moeds = [];
+    const moedSelect = getMoedSelect(selects);
+    const moedOptions = moedSelect.options;
+    for (var moed_idx = 0; moed_idx < moedOptions.length; moed_idx++) {
+        moeds.push(moedOptions[moed_idx].value);
+    }
+
+    return {groups: groups, moeds: moeds};
+}
+
+function extractData(iframe) {
+    if(iframe.getElementsByClassName("msgerrs rounddiv").length > 0 || 
+       iframe.body.innerText.indexOf("אין ציונים בקורס") != -1) {
+        return false;
+    }
+
+    var selects = iframe.getElementsByTagName("select");
+    if (selects.length === 0) {
+        return undefined;
+    }
+
+    const tables = iframe.getElementsByTagName("table");
+    var teachersTable = tables[0];
+    var statsTable = tables[1];
+    var gradesTable = tables[3];
+    for (var table_idx = 0; table_idx < tables.length; table_idx++) {
+        const table = tables[table_idx];
+        if (table.offsetParent !== null) {
+            const table_content = table.innerText;
+            if (table_content.indexOf("מרצה") != -1) {
+                teachersTable = table;
+            }
+            if (table_content.indexOf("ממוצע") != -1 && table_content.indexOf("סטיית תקן") != -1) {
+                statsTable = table;
+            }
+            if (table_content.indexOf("תחום") != -1 && table_content.indexOf("ציונים") != -1) {
+                gradesTable = table;
+            }
+        }
+    }
+
+    const groupSelect = getGroupSelect(selects);
+    const course_group_name = (groupSelect.value !== "") ? groupSelect.value : "00";
+
+    const moedSelect = getMoedSelect(selects);
+    const moed = (moedSelect.value < 9) ? moedSelect.value : 0; // 9 is final grade, which is marked in backend as 0
+
+    return {
+        course_group_name: course_group_name,
         moed: moed,
-        students_count: students_count,
-        failures_count: failures_count,
-        grades: grades,
-        mean: mean,
-        median: median,
-        standard_deviation: standard_deviation
+        ...getExamTeachers(teachersTable),
+        ...getGeneralExamData(iframe),
+        ...getExamGrades(gradesTable),
+        ...getExamStatistics(statsTable)
     };
 }
 

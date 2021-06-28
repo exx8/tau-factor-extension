@@ -92,8 +92,11 @@ function createCourseGroup(data, callback) {
     const params = {
         course_instance_id: data.course_instance_id,
         course_group_name: data.course_group_name,
-        teachers: data.teacher_names.map(function(name) { return { teacher_name: name}; }),
     };
+
+    if (data.teacher_names !== undefined) {
+        params["teachers"] = data.teacher_names.map(function(name) { return { teacher_name: name}; });
+    }
 
     const wrapped_callback = (function(callback) {
         return function (response_status, response_text) {
@@ -138,6 +141,7 @@ function addExam(data, callback) {
                 if (response_status == 201) {
                     const response_json = JSON.parse(response_text);
                     callback(true);
+                    return;
                 }
                 if (response_status == 400) {
                     const response_json = JSON.parse(response_text);
@@ -165,7 +169,7 @@ function submitGrades(data, sendResponse) {
         return function (course_group_id) {
             if (course_group_id === null) {
                 addExamCallback(false);
-        return;
+                return;
             }
             data["course_group_id"] = course_group_id;
             addExam(data, addExamCallback);
