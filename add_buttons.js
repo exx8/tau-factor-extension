@@ -1,5 +1,5 @@
-function addHypenInIndex(str,index) {
-    return `${str.slice(0,index)}-{str.slice(index)}`;
+function addHyphenInIndex(str,index) {
+    return `${str.slice(0,index)}-${str.slice(index)}`;
 }
 
 function removeHourGlass() {
@@ -272,7 +272,7 @@ function extractData(iframe, should_get_exam_instances) {
     var course_data = iframe.getElementsByClassName("listtd rounddiv2")[0].getElementsByTagName("b");
     var year_sem = course_data[1].innerHTML.split("/");
 
-    const course_code = addHypenInIndex(course_data[0].innerHTML.split("-")[0], 4);
+    const course_code = addHyphenInIndex(course_data[0].innerHTML.split("-")[0], 4);
 
     var year = year_sem[0];
     var semester_num = year_sem[1];
