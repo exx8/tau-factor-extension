@@ -89,7 +89,7 @@ function addIframe(ID, name, btn) {
                     moeds = res.moeds;
                     groups = res.groups;
                     moedIdx = -1;
-                    groupIdx = 0; // If we don't want group "All" then change to 1
+					groupIdx = 1; // no need for all groups together
                 } else if (res !== false) {
                     res["course_name"] = name;
                     submitGrades(res);
