@@ -11,8 +11,7 @@ function ajaxSend(method, api, params, callback) {
         };
     }) (callback);
 
-    // var url = `https://www.tau-factor.com/api/v1${api}`;
-    var url = `https://tau-factor.herokuapp.com/api/v1${api}`;
+    var url = `https://www.tau-factor.com/api/v1${api}`;
     if (method == "GET") {
         const prms = new URLSearchParams(params);
         url = `${url}?${prms.toString()}`;

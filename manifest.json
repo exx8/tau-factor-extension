@@ -16,7 +16,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.tau-factor.com/*", "https://tau-factor.com/*", "https://tau-factor.herokuapp.com/api/v1/*"],
+      "matches": ["https://www.tau-factor.com/*", "https://tau-factor.com/*"],
       "js": ["installed.js"],
       "run_at": "document_end"
     },
